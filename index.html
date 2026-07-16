@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Deforestasi Kalimantan Timur 2015–2025</title>
+<style>
+  :root {
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+  body {
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1f2937;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 16px 24px;
+  }
+  .title {
+    text-align: center;
+    font-size: clamp(1.1rem, 3.2vw, 1.5rem);
+    font-weight: 700;
+    margin: 0 0 16px;
+    color: #1b4332;
+  }
+  .chart-container {
+    position: relative;
+    width: 100%;
+  }
+  svg.chart {
+    width: 100%;
+    height: auto;
+    display: block;
+    overflow: visible;
+  }
+  .grid-line {
+    stroke: #e5e7eb;
+    stroke-width: 1;
+  }
+  .axis-line {
+    stroke: #9ca3af;
+    stroke-width: 1.5;
+  }
+  .axis-label {
+    font-size: 12px;
+    fill: #4b5563;
+  }
+  .axis-title {
+    font-size: 12px;
+    fill: #374151;
+    font-weight: 600;
+  }
+  .bar {
+    fill: #2d6a4f; /* hijau hutan */
+    cursor: pointer;
+    transition: fill 0.15s ease;
+    outline: none;
+  }
+  .bar:hover,
+  .bar.bar-hover {
+    fill: #1b4332; /* hijau hutan lebih gelap saat hover */
+  }
+  .bar:focus-visible {
+    stroke: #081c15;
+    stroke-width: 2;
+  }
+  .bar.bar-selected {
+    fill: #40916c; /* hijau hutan lebih terang saat dipilih */
+  }
+  .tooltip {
+    position: absolute;
+    transform: translate(-50%, -115%);
+    background: #081c15;
+    color: #f0fdf4;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    z-index: 10;
+    display: none;
+  }
+  .detail-panel {
+    position: relative;
+    margin-top: 16px;
+    padding: 14px 40px 14px 16px;
+    background: #f0fdf4;
+    border: 1px solid #b7e4c7;
+    border-radius: 8px;
+    font-size: 14px;
+    display: none;
+  }
+  .detail-line {
+    margin: 4px 0;
+  }
+  .detail-key {
+    font-weight: 600;
+    color: #1b4332;
+  }
+  .close-btn {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 4px;
+  }
+  .close-btn:hover {
+    color: #111827;
+  }
+  .hint {
+    margin-top: 14px;
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+  }
+  .source {
+    margin-top: 18px;
+    font-size: 12px;
+    color: #9ca3af;
+    text-align: center;
+  }
+  @media (max-width: 480px) {
+    .wrap { padding: 12px 8px 18px; }
+    .tooltip { font-size: 11px; }
+    .detail-panel { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h2 class="title">Deforestasi Kalimantan Timur 2015–2025</h2>
+
+  <div class="chart-container" id="chartContainer">
+    <svg id="chart" class="chart" preserveAspectRatio="xMidYMid meet" role="img"
+         aria-label="Deforestasi Kalimantan Timur 2015–2025"></svg>
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+
+  <div class="detail-panel" id="detailPanel">
+    <button class="close-btn" id="closeDetail" aria-label="Tutup detail">×</button>
+    <p class="detail-line"><span class="detail-key">Tahun:</span> <span id="detailTahun"></span></p>
+    <p class="detail-line"><span class="detail-key">Deforestasi:</span> <span id="detailHektare"></span> hektare</p>
+  </div>
+  <p class="hint" id="hintText">Klik salah satu batang untuk melihat detail data.</p>
+
+  <p class="source">Sumber data: Auriga Nusantara (AURIGA_NUSANTARA.csv)</p>
+</div>
+
+<script>
+  // ======================================================================
+  // DATA — diambil langsung dari file CSV yang diunggah
+  // (AURIGA_NUSANTARA.csv), nilai TIDAK diubah.
+  // Baris "Total" pada CSV tidak dimasukkan karena bukan data tahunan.
+  // ======================================================================
+  const data = [
+    { tahun: 2015, hektare: 45235.24 },
+    { tahun: 2016, hektare: 53974.48 },
+    { tahun: 2017, hektare: 27449.38 },
+    { tahun: 2018, hektare: 44365.94 },
+    { tahun: 2019, hektare: 34227.90 },
+    { tahun: 2020, hektare: 16286.35 },
+    { tahun: 2021, hektare: 13160.76 },
+    { tahun: 2022, hektare: 12352.59 },
+    { tahun: 2023, hektare: 28116.97 },
+    { tahun: 2024, hektare: 40281.96 },
+    { tahun: 2025, hektare: 46592.06 }
+  ];
+
+  const formatID = (n) =>
+    new Intl.NumberFormat("id-ID", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(n);
+
+  // Layout
+  const W = 800, H = 460;
+  const PAD_LEFT = 70, PAD_RIGHT = 20, PAD_TOP = 30, PAD_BOTTOM = 70;
+  const chartW = W - PAD_LEFT - PAD_RIGHT;
+  const chartH = H - PAD_TOP - PAD_BOTTOM;
+
+  const maxVal = Math.max(...data.map(d => d.hektare));
+  const yMax = Math.ceil((maxVal * 1.1) / 5000) * 5000;
+
+  const barGap = 14;
+  const barW = chartW / data.length - barGap;
+  const yTicks = 5;
+  const yTickValues = Array.from({ length: yTicks + 1 }, (_, i) => Math.round((yMax / yTicks) * i));
+
+  const barX = (i) => PAD_LEFT + i * (barW + barGap) + barGap / 2;
+  const barY = (val) => PAD_TOP + chartH - (val / yMax) * chartH;
+  const barH = (val) => (val / yMax) * chartH;
+  const yPos = (val) => PAD_TOP + chartH - (val / yMax) * chartH;
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("chart");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+  function el(tag, attrs = {}, text) {
+    const e = document.createElementNS(svgNS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  // Grid lines + Y labels
+  yTickValues.forEach((tick) => {
+    svg.appendChild(el("line", {
+      x1: PAD_LEFT, x2: W - PAD_RIGHT, y1: yPos(tick), y2: yPos(tick), class: "grid-line"
+    }));
+    svg.appendChild(el("text", {
+      x: PAD_LEFT - 10, y: yPos(tick) + 4, class: "axis-label y-label", "text-anchor": "end"
+    }, new Intl.NumberFormat("id-ID").format(tick)));
+  });
+
+  // X axis baseline
+  svg.appendChild(el("line", {
+    x1: PAD_LEFT, x2: W - PAD_RIGHT, y1: PAD_TOP + chartH, y2: PAD_TOP + chartH, class: "axis-line"
+  }));
+
+  const tooltip = document.getElementById("tooltip");
+  const detailPanel = document.getElementById("detailPanel");
+  const detailTahun = document.getElementById("detailTahun");
+  const detailHektare = document.getElementById("detailHektare");
+  const hintText = document.getElementById("hintText");
+
+  let selectedBarEl = null;
+
+  function showTooltip(evt, d, rectEl) {
+    rectEl.classList.add("bar-hover");
+    const rect = svg.getBoundingClientRect();
+    const scaleX = rect.width / W;
+    const scaleY = rect.height / H;
+    tooltip.style.left = ((barX(data.indexOf(d)) + barW / 2) * scaleX) + "px";
+    tooltip.style.top = (barY(d.hektare) * scaleY) + "px";
+    tooltip.innerHTML = `<strong>${d.tahun}</strong><br>${formatID(d.hektare)} ha`;
+    tooltip.style.display = "block";
+  }
+
+  function hideTooltip(rectEl) {
+    rectEl.classList.remove("bar-hover");
+    tooltip.style.display = "none";
+  }
+
+  function selectBar(d, rectEl) {
+    if (selectedBarEl) selectedBarEl.classList.remove("bar-selected");
+    rectEl.classList.add("bar-selected");
+    selectedBarEl = rectEl;
+
+    detailTahun.textContent = d.tahun;
+    detailHektare.textContent = formatID(d.hektare);
+    detailPanel.style.display = "block";
+    hintText.style.display = "none";
+  }
+
+  document.getElementById("closeDetail").addEventListener("click", () => {
+    if (selectedBarEl) selectedBarEl.classList.remove("bar-selected");
+    selectedBarEl = null;
+    detailPanel.style.display = "none";
+    hintText.style.display = "block";
+  });
+
+  // Bars + X labels
+  data.forEach((d, i) => {
+    const rect = el("rect", {
+      x: barX(i),
+      y: barY(d.hektare),
+      width: barW,
+      height: barH(d.hektare),
+      rx: 4,
+      class: "bar",
+      tabindex: "0",
+      role: "button",
+      "aria-label": `Tahun ${d.tahun}, deforestasi ${formatID(d.hektare)} hektare`
+    });
+
+    rect.addEventListener("mouseenter", (e) => showTooltip(e, d, rect));
+    rect.addEventListener("mousemove", (e) => showTooltip(e, d, rect));
+    rect.addEventListener("mouseleave", () => hideTooltip(rect));
+    rect.addEventListener("click", () => selectBar(d, rect));
+    rect.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        selectBar(d, rect);
+      }
+    });
+
+    svg.appendChild(rect);
+
+    svg.appendChild(el("text", {
+      x: barX(i) + barW / 2,
+      y: PAD_TOP + chartH + 24,
+      class: "axis-label x-label",
+      "text-anchor": "middle"
+    }, d.tahun));
+  });
+
+  // Y axis title
+  svg.appendChild(el("text", {
+    x: -(PAD_TOP + chartH / 2),
+    y: 18,
+    class: "axis-title",
+    "text-anchor": "middle",
+    transform: "rotate(-90)"
+  }, "Deforestasi (hektare)"));
+</script>
+
+</body>
+</html>
